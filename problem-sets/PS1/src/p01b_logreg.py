@@ -13,6 +13,7 @@ def main(train_path, eval_path, pred_path):
         pred_path: Path to save predictions.
     """
     x_train, y_train = util.load_dataset(train_path, add_intercept=True)
+    hello = 2
 
     # *** START CODE HERE ***
     # *** END CODE HERE ***
