@@ -1,22 +1,30 @@
 import math
-
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 
 import util
 
 
-def initial_state():
+def initial_state(train_x, train_y):
     """Return the initial state for the perceptron.
 
     This function computes and then returns the initial state of the perceptron.
     Feel free to use any data type (dicts, lists, tuples, or custom classes) to
     contain the state of the perceptron.
-
     """
 
-    # *** START CODE HERE ***
-    # *** END CODE HERE ***
+    # Initialize the perceptron state with:
+    # - alphas: weights for each training example (initially 0)
+    # - error_terms: difference between true and predicted labels
+    # - train_x: store training data for kernel calculations
+    state = {}
+    alphas = [0] * len(train_x)
+    error_terms = train_y  # Initially set to true labels
+    state['alphas'] = alphas
+    state['error_terms'] = error_terms
+    state['train_x'] = train_x
+    return state
 
 
 def predict(state, kernel, x_i):
@@ -32,8 +40,14 @@ def predict(state, kernel, x_i):
     Returns:
         Returns the prediction (i.e 0 or 1)
     """
-    # *** START CODE HERE ***
-    # *** END CODE HERE ***
+    # Compute weighted sum of kernel evaluations between input x_i and all training points
+    # The prediction is a linear combination of:
+    # - alpha weights
+    # - error terms
+    # - kernel function evaluations
+    prediction = sum(state['alphas'][i] * state['error_terms'][i] * kernel(x_i, state['train_x'][i]) 
+                    for i in range(len(state['alphas'])))
+    return prediction
 
 
 def update_state(state, kernel, learning_rate, x_i, y_i):
@@ -46,7 +60,20 @@ def update_state(state, kernel, learning_rate, x_i, y_i):
         x_i: A vector containing the features for a single instance
         y_i: A 0 or 1 indicating the label for a single instance
     """
-    # *** START CODE HERE ***
+    # Get current prediction for this example
+    prediction = predict(state, kernel, x_i)
+    
+    # Find which training example we're currently looking at
+    i = next(idx for idx, x in enumerate(state['train_x']) if np.array_equal(x, x_i))
+    
+    # Only update if prediction is incorrect
+    if sign(prediction) != y_i:
+        # Increment the weight (alpha) for this example
+        state['alphas'][i] += 1
+        # Update error term as difference between true and predicted labels
+        state['error_terms'][i] = y_i - sign(prediction)
+    return state
+        
     # *** END CODE HERE ***
 
 
@@ -96,26 +123,34 @@ def train_perceptron(kernel_name, kernel, learning_rate):
     """
     train_x, train_y = util.load_csv('../data/ds5_train.csv')
 
-    state = initial_state()
+    state = initial_state(train_x, train_y)
 
-    for x_i, y_i in zip(train_x, train_y):
-        update_state(state, kernel, learning_rate, x_i, y_i)
+    for i in range(10):
+        for x_i, y_i in zip(train_x, train_y):
+            update_state(state, kernel, learning_rate, x_i, y_i)
 
-    test_x, test_y = util.load_csv('../data/ds5_train.csv')
+    test_x, test_y = util.load_csv('../data/ds5_test1.csv')
 
     plt.figure(figsize=(12, 8))
     util.plot_contour(lambda a: predict(state, kernel, a))
     util.plot_points(test_x, test_y)
-    plt.savefig('./output/p05_{}_output.pdf'.format(kernel_name))
 
-    predict_y = [predict(state, kernel, test_x[i, :]) for i in range(test_y.shape[0])]
+    output_dir = "./output"
+    # Creates the directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)  
 
+    # Generate the filename with the kernel name
+    filename = f"{output_dir}/p05_{kernel_name}_output.pdf"
+    plt.savefig(filename)
+
+    # Generate the predictions
+    predict_y = [sign(predict(state, kernel, test_x[i, :])) for i in range(test_y.shape[0])]
     np.savetxt('./output/p05_{}_predictions'.format(kernel_name), predict_y)
 
 
 def main():
-    train_perceptron('dot', dot_kernel, 0.5)
-    train_perceptron('rbf', rbf_kernel, 0.5)
+    train_perceptron('dot', dot_kernel, 1)
+    train_perceptron('rbf', rbf_kernel, 1)
 
 
 if __name__ == "__main__":
